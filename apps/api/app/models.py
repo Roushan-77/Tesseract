@@ -68,7 +68,7 @@ class Evidence(Base):
     ingestion_method: Mapped[str] = mapped_column(String(32), default="document")
     pipeline_version: Mapped[str] = mapped_column(String(32), default="prompt4.5")
     structured_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    integrity = relationship("EvidenceIntegrity", back_populates="evidence", uselist=False)
+    integrity = relationship("EvidenceIntegrity", back_populates="evidence", uselist=False, cascade="all, delete-orphan")
     case = relationship("Case")
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
 

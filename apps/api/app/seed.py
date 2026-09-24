@@ -389,11 +389,6 @@ def run():
             )
 
         # Preload CASE-002 Evidence, Entities, Mentions, Resolutions, Relations, and Events
-        # Clean existing CASE-002 evidence if any exists to ensure consistent state
-        old_case2_evs = db.scalars(select(Evidence).where(Evidence.case_id == case2.id)).all()
-        for old_ev in old_case2_evs:
-            db.delete(old_ev)
-        db.flush()
 
         # 4.1 Canonical Entities for CASE-002 (~15 Entities)
         entities_data_002 = [
@@ -650,65 +645,82 @@ CROSS-CASE LINKAGE: Corporate account ACC-LOGI-17 used by Apex Logistics Mumbai 
                 "structured": item["structured_json"],
             }
 
-            evd = Evidence(
-                evidence_id=eid,
-                case_id=case2.id,
-                filename=filename,
-                document_type=item["document_type"],
-                mime_type=item["mime_type"],
-                storage_key=storage_key,
-                document_language="en",
-                uploaded_by_id=rahul.id,
-                processing_status="EXTRACTION_COMPLETED",
-                ocr_status="COMPLETED",
-                extraction_status="COMPLETED",
-                integrity_status="VERIFIED",
-                ocr_text=item["ocr_text"],
-                ocr_pages=[item["ocr_text"]],
-                notes=item["notes"],
-                processed_at=now(),
-                ingestion_method=item["ingestion_method"],
-                structured_json=item["structured_json"],
-                extraction_json=extraction_payload,
-            )
-            db.add(evd)
-            db.flush()
-
-            integrity = EvidenceIntegrity(
-                evidence_id=evd.id,
-                sha256=sha256_hash,
-                file_size=file_size,
-                algorithm="SHA-256",
-                ledger_record_id=f"LEDGER-{eid}-{uid()[:8].upper()}",
-                registration_status="REGISTERED",
-                verification_status="VERIFIED",
-                verified_at=now(),
-            )
-            db.add(integrity)
-            db.flush()
-
-            db.add(
-                AuditEvent(
-                    actor_id=rahul.id,
-                    action="EVIDENCE_UPLOADED",
-                    resource_type="EVIDENCE",
-                    resource_id=eid,
+            evd = db.scalar(select(Evidence).where(Evidence.case_id == case2.id, Evidence.evidence_id == eid))
+            if not evd:
+                evd = Evidence(
+                    evidence_id=eid,
                     case_id=case2.id,
-                    result="SUCCESS",
-                    metadata_json={"filename": filename, "type": item["document_type"]},
+                    filename=filename,
+                    document_type=item["document_type"],
+                    mime_type=item["mime_type"],
+                    storage_key=storage_key,
+                    document_language="en",
+                    uploaded_by_id=rahul.id,
+                    processing_status="EXTRACTION_COMPLETED",
+                    ocr_status="COMPLETED",
+                    extraction_status="COMPLETED",
+                    integrity_status="VERIFIED",
+                    ocr_text=item["ocr_text"],
+                    ocr_pages=[item["ocr_text"]],
+                    notes=item["notes"],
+                    processed_at=now(),
+                    ingestion_method=item["ingestion_method"],
+                    structured_json=item["structured_json"],
+                    extraction_json=extraction_payload,
                 )
-            )
-            db.add(
-                AuditEvent(
-                    actor_id=rahul.id,
-                    action="EVIDENCE_HASH_REGISTERED",
-                    resource_type="EVIDENCE",
-                    resource_id=eid,
-                    case_id=case2.id,
-                    result="SUCCESS",
-                    metadata_json={"sha256": sha256_hash, "ledger_record_id": integrity.ledger_record_id},
+                db.add(evd)
+                db.flush()
+
+                integrity = EvidenceIntegrity(
+                    evidence_id=evd.id,
+                    sha256=sha256_hash,
+                    file_size=file_size,
+                    algorithm="SHA-256",
+                    ledger_record_id=f"LEDGER-{eid}-{uid()[:8].upper()}",
+                    registration_status="REGISTERED",
+                    verification_status="VERIFIED",
+                    verified_at=now(),
                 )
-            )
+                db.add(integrity)
+                db.flush()
+
+                db.add(
+                    AuditEvent(
+                        actor_id=rahul.id,
+                        action="EVIDENCE_UPLOADED",
+                        resource_type="EVIDENCE",
+                        resource_id=eid,
+                        case_id=case2.id,
+                        result="SUCCESS",
+                        metadata_json={"filename": filename, "type": item["document_type"]},
+                    )
+                )
+                db.add(
+                    AuditEvent(
+                        actor_id=rahul.id,
+                        action="EVIDENCE_HASH_REGISTERED",
+                        resource_type="EVIDENCE",
+                        resource_id=eid,
+                        case_id=case2.id,
+                        result="SUCCESS",
+                        metadata_json={"sha256": sha256_hash, "ledger_record_id": integrity.ledger_record_id},
+                    )
+                )
+            else:
+                integrity = db.scalar(select(EvidenceIntegrity).where(EvidenceIntegrity.evidence_id == evd.id))
+                if not integrity:
+                    integrity = EvidenceIntegrity(
+                        evidence_id=evd.id,
+                        sha256=sha256_hash,
+                        file_size=file_size,
+                        algorithm="SHA-256",
+                        ledger_record_id=f"LEDGER-{eid}-{uid()[:8].upper()}",
+                        registration_status="REGISTERED",
+                        verification_status="VERIFIED",
+                        verified_at=now(),
+                    )
+                    db.add(integrity)
+                    db.flush()
             evidence_records_002[eid] = evd
 
         # 4.3 Mentions for CASE-002 (including 3 ambiguous mentions for Human Review)
@@ -766,72 +778,86 @@ CROSS-CASE LINKAGE: Corporate account ACC-LOGI-17 used by Apex Logistics Mumbai 
             evd = evidence_records_002[eid]
             ent = entities_002.get(ent_name)
             mkey = f"{eid}:{mtype}:{start}:{end}:{norm_val}"
-            rec = EntityMentionRecord(
-                evidence_id=evd.id,
-                entity_id=ent.id if ent else None,
-                mention_key=mkey,
-                entity_type=mtype,
-                text=text,
-                normalized_value=norm_val,
-                start=start,
-                end=end,
-                confidence=conf,
-                resolution_status=res_stat,
-                resolution_confidence=conf,
-            )
-            db.add(rec)
-            db.flush()
+            rec = db.scalar(select(EntityMentionRecord).where(EntityMentionRecord.evidence_id == evd.id, EntityMentionRecord.mention_key == mkey))
+            if not rec:
+                rec = EntityMentionRecord(
+                    evidence_id=evd.id,
+                    entity_id=ent.id if ent else None,
+                    mention_key=mkey,
+                    entity_type=mtype,
+                    text=text,
+                    normalized_value=norm_val,
+                    start=start,
+                    end=end,
+                    confidence=conf,
+                    resolution_status=res_stat,
+                    resolution_confidence=conf,
+                )
+                db.add(rec)
+                db.flush()
             mentions_002[f"{eid}:{ent_name}"] = rec
             mentions_002[f"{eid}:{text}"] = rec
 
         # 4.4 Exactly 3 Ambiguous Mentions for Human-In-The-Loop Entity Resolution
         # Ambiguous 1: "R. Mehta" in EVD-002-FIR01
-        m_r_mehta = EntityMentionRecord(
-            evidence_id=evidence_records_002["EVD-002-FIR01"].id,
-            entity_id=None,
-            mention_key="EVD-002-FIR01:PERSON:820:828:R. Mehta",
-            entity_type="PERSON",
-            text="R. Mehta",
-            normalized_value="R. Mehta",
-            start=820,
-            end=828,
-            confidence=0.88,
-            resolution_status="UNRESOLVED",
-        )
-        db.add(m_r_mehta)
-        db.flush()
+        mkey1 = "EVD-002-FIR01:PERSON:820:828:R. Mehta"
+        evd_fir = evidence_records_002["EVD-002-FIR01"]
+        m_r_mehta = db.scalar(select(EntityMentionRecord).where(EntityMentionRecord.evidence_id == evd_fir.id, EntityMentionRecord.mention_key == mkey1))
+        if not m_r_mehta:
+            m_r_mehta = EntityMentionRecord(
+                evidence_id=evd_fir.id,
+                entity_id=None,
+                mention_key=mkey1,
+                entity_type="PERSON",
+                text="R. Mehta",
+                normalized_value="R. Mehta",
+                start=820,
+                end=828,
+                confidence=0.88,
+                resolution_status="UNRESOLVED",
+            )
+            db.add(m_r_mehta)
+            db.flush()
 
         # Ambiguous 2: "Apex Logistics" in EVD-002-INTEL01
-        m_apex_short = EntityMentionRecord(
-            evidence_id=evidence_records_002["EVD-002-INTEL01"].id,
-            entity_id=None,
-            mention_key="EVD-002-INTEL01:ORGANIZATION:510:524:Apex Logistics",
-            entity_type="ORGANIZATION",
-            text="Apex Logistics",
-            normalized_value="Apex Logistics",
-            start=510,
-            end=524,
-            confidence=0.91,
-            resolution_status="UNRESOLVED",
-        )
-        db.add(m_apex_short)
-        db.flush()
+        mkey2 = "EVD-002-INTEL01:ORGANIZATION:510:524:Apex Logistics"
+        evd_intel = evidence_records_002["EVD-002-INTEL01"]
+        m_apex_short = db.scalar(select(EntityMentionRecord).where(EntityMentionRecord.evidence_id == evd_intel.id, EntityMentionRecord.mention_key == mkey2))
+        if not m_apex_short:
+            m_apex_short = EntityMentionRecord(
+                evidence_id=evd_intel.id,
+                entity_id=None,
+                mention_key=mkey2,
+                entity_type="ORGANIZATION",
+                text="Apex Logistics",
+                normalized_value="Apex Logistics",
+                start=510,
+                end=524,
+                confidence=0.91,
+                resolution_status="UNRESOLVED",
+            )
+            db.add(m_apex_short)
+            db.flush()
 
         # Ambiguous 3: "MH-04-KT-2187 (Commercial Van)" in EVD-002-SURV01
-        m_veh_desc = EntityMentionRecord(
-            evidence_id=evidence_records_002["EVD-002-SURV01"].id,
-            entity_id=None,
-            mention_key="EVD-002-SURV01:VEHICLE:160:190:MH-04-KT-2187 (Commercial Van)",
-            entity_type="VEHICLE",
-            text="MH-04-KT-2187 (Commercial Van)",
-            normalized_value="MH-04-KT-2187",
-            start=160,
-            end=190,
-            confidence=0.94,
-            resolution_status="UNRESOLVED",
-        )
-        db.add(m_veh_desc)
-        db.flush()
+        mkey3 = "EVD-002-SURV01:VEHICLE:160:190:MH-04-KT-2187 (Commercial Van)"
+        evd_surv = evidence_records_002["EVD-002-SURV01"]
+        m_veh_desc = db.scalar(select(EntityMentionRecord).where(EntityMentionRecord.evidence_id == evd_surv.id, EntityMentionRecord.mention_key == mkey3))
+        if not m_veh_desc:
+            m_veh_desc = EntityMentionRecord(
+                evidence_id=evd_surv.id,
+                entity_id=None,
+                mention_key=mkey3,
+                entity_type="VEHICLE",
+                text="MH-04-KT-2187 (Commercial Van)",
+                normalized_value="MH-04-KT-2187",
+                start=160,
+                end=190,
+                confidence=0.94,
+                resolution_status="UNRESOLVED",
+            )
+            db.add(m_veh_desc)
+            db.flush()
 
         # Target confirmed mentions
         m_rohan_fir = mentions_002["EVD-002-FIR01:Rohan Mehta"]
@@ -839,33 +865,40 @@ CROSS-CASE LINKAGE: Corporate account ACC-LOGI-17 used by Apex Logistics Mumbai 
         m_veh_fir = mentions_002["EVD-002-FIR01:MH-04-KT-2187"]
 
         # 4.5 Suggestions for Human Review
-        db.add(
-            EntityResolution(
-                source_mention_id=m_r_mehta.id,
-                target_mention_id=m_rohan_fir.id,
-                confidence=0.88,
-                reasons=["High name similarity (Levenshtein 0.89)", "Common phone link (+91 90000 32741)", "Same location context (Warehouse 14)"],
-                status="SUGGESTED",
+        res1 = db.scalar(select(EntityResolution).where(EntityResolution.source_mention_id == m_r_mehta.id, EntityResolution.target_mention_id == m_rohan_fir.id))
+        if not res1:
+            db.add(
+                EntityResolution(
+                    source_mention_id=m_r_mehta.id,
+                    target_mention_id=m_rohan_fir.id,
+                    confidence=0.88,
+                    reasons=["High name similarity (Levenshtein 0.89)", "Common phone link (+91 90000 32741)", "Same location context (Warehouse 14)"],
+                    status="SUGGESTED",
+                )
             )
-        )
-        db.add(
-            EntityResolution(
-                source_mention_id=m_apex_short.id,
-                target_mention_id=m_apex_fir.id,
-                confidence=0.91,
-                reasons=["Substring match on organization name", "Matching primary address (Andheri East)", "Shared director (Rohan Mehta)"],
-                status="SUGGESTED",
+        res2 = db.scalar(select(EntityResolution).where(EntityResolution.source_mention_id == m_apex_short.id, EntityResolution.target_mention_id == m_apex_fir.id))
+        if not res2:
+            db.add(
+                EntityResolution(
+                    source_mention_id=m_apex_short.id,
+                    target_mention_id=m_apex_fir.id,
+                    confidence=0.91,
+                    reasons=["Substring match on organization name", "Matching primary address (Andheri East)", "Shared director (Rohan Mehta)"],
+                    status="SUGGESTED",
+                )
             )
-        )
-        db.add(
-            EntityResolution(
-                source_mention_id=m_veh_desc.id,
-                target_mention_id=m_veh_fir.id,
-                confidence=0.94,
-                reasons=["Exact registration plate match", "Associated driver Sunil Deshmukh"],
-                status="SUGGESTED",
+        res3 = db.scalar(select(EntityResolution).where(EntityResolution.source_mention_id == m_veh_desc.id, EntityResolution.target_mention_id == m_veh_fir.id))
+        if not res3:
+            db.add(
+                EntityResolution(
+                    source_mention_id=m_veh_desc.id,
+                    target_mention_id=m_veh_fir.id,
+                    confidence=0.94,
+                    reasons=["Exact registration plate match", "Associated driver Sunil Deshmukh"],
+                    status="SUGGESTED",
+                )
             )
-        )
+        db.flush()
 
         # 4.6 Relationships for CASE-002 (18 Meaningful Links)
         relations_data_002 = [
@@ -897,19 +930,29 @@ CROSS-CASE LINKAGE: Corporate account ACC-LOGI-17 used by Apex Logistics Mumbai 
             tgt_m = mentions_002.get(f"{eid}:{tgt_ent}") or next((m for k, m in mentions_002.items() if tgt_ent in k), None)
 
             if src_e and tgt_e and src_m and tgt_m:
-                db.add(
-                    Relation(
-                        case_id=case2.id,
-                        evidence_id=evd.id,
-                        source_entity_id=src_e.id,
-                        target_entity_id=tgt_e.id,
-                        source_mention_id=src_m.id,
-                        target_mention_id=tgt_m.id,
-                        relation_type=rel_type,
-                        source_text=src_text,
-                        confidence=conf,
+                existing_rel = db.scalar(
+                    select(Relation).where(
+                        Relation.evidence_id == evd.id,
+                        Relation.source_mention_id == src_m.id,
+                        Relation.target_mention_id == tgt_m.id,
+                        Relation.relation_type == rel_type,
                     )
                 )
+                if not existing_rel:
+                    db.add(
+                        Relation(
+                            case_id=case2.id,
+                            evidence_id=evd.id,
+                            source_entity_id=src_e.id,
+                            target_entity_id=tgt_e.id,
+                            source_mention_id=src_m.id,
+                            target_mention_id=tgt_m.id,
+                            relation_type=rel_type,
+                            source_text=src_text,
+                            confidence=conf,
+                        )
+                    )
+        db.flush()
 
         # 4.7 Timeline Events for CASE-002 (10 Chronological Events across August 2026)
         timeline_events_002 = [
@@ -1028,24 +1071,26 @@ CROSS-CASE LINKAGE: Corporate account ACC-LOGI-17 used by Apex Logistics Mumbai 
         for eid, ev_type, ev_date, ev_time, loc_name, part_names, src_text, conf, ev_key in timeline_events_002:
             evd = evidence_records_002[eid]
             loc_ent = entities_002.get(loc_name) if loc_name else None
-            ev = Event(
-                case_id=case2.id,
-                evidence_id=evd.id,
-                event_key=ev_key,
-                event_type=ev_type,
-                event_date=ev_date,
-                event_time=ev_time,
-                location_entity_id=loc_ent.id if loc_ent else None,
-                source_text=src_text,
-                confidence=conf,
-            )
-            db.add(ev)
-            db.flush()
+            existing_ev = db.scalar(select(Event).where(Event.evidence_id == evd.id, Event.event_key == ev_key))
+            if not existing_ev:
+                ev = Event(
+                    case_id=case2.id,
+                    evidence_id=evd.id,
+                    event_key=ev_key,
+                    event_type=ev_type,
+                    event_date=ev_date,
+                    event_time=ev_time,
+                    location_entity_id=loc_ent.id if loc_ent else None,
+                    source_text=src_text,
+                    confidence=conf,
+                )
+                db.add(ev)
+                db.flush()
 
-            for pname in part_names:
-                m = mentions_002.get(f"{eid}:{pname}")
-                if m:
-                    db.add(EventParticipant(event_id=ev.id, mention_id=m.id))
+                for pname in part_names:
+                    m = mentions_002.get(f"{eid}:{pname}")
+                    if m:
+                        db.add(EventParticipant(event_id=ev.id, mention_id=m.id))
 
         db.commit()
         print("Tesseract Full Seeding Completed Successfully:")
