@@ -9,7 +9,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login, t } = useApp();
   const [investigatorId, setId] = useState("INV-017");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState(process.env.NEXT_PUBLIC_DEMO_PASSWORD || "inv123");
   const [error, setError] = useState("");
 
   async function submit(e: FormEvent) {
@@ -92,7 +92,7 @@ export default function LoginPage() {
               <p className="mt-2 text-slate-600">
                 Investigator ID: <span className="font-mono">INV-017</span>
               </p>
-              <p className="mt-1 text-slate-500">Use password:"inv123"</p>
+              <p className="mt-1 text-slate-500">Use password: inv123</p>
             </div>
           </div>
         </section>
