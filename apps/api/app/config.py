@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://tesseract:tesseract@localhost:5432/tesseract"
     jwt_secret: str = "local-development-secret"
-    demo_password: str = "demo-password"
+    demo_password: str = "inv123"
     jwt_algorithm: str = "HS256"
     tesseract_cmd: str | None = None
     pdftoppm_cmd: str | None = None

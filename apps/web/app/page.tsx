@@ -92,7 +92,7 @@ export default function LoginPage() {
               <p className="mt-2 text-slate-600">
                 Investigator ID: <span className="font-mono">INV-017</span>
               </p>
-              <p className="mt-1 text-slate-500">Use password:"demo-password"</p>
+              <p className="mt-1 text-slate-500">Use password:"inv123"</p>
             </div>
           </div>
         </section>
