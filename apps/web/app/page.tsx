@@ -11,10 +11,12 @@ export default function LoginPage() {
   const [investigatorId, setId] = useState("INV-017");
   const [password, setPassword] = useState(process.env.NEXT_PUBLIC_DEMO_PASSWORD || "inv123");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError("");
+    setLoading(true);
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/auth/login`, {
         method: "POST",
@@ -27,6 +29,8 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch {
       setError("Sign-in failed. Check the demo password configured for this environment.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -83,8 +87,12 @@ export default function LoginPage() {
                 />
               </label>
               {error && <AlertBanner message={error} type="error" onDismiss={() => setError("")} />}
-              <button className="w-full bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#294f77]">
-                {t("signIn")}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#294f77] disabled:opacity-50"
+              >
+                {loading ? "Signing in..." : t("signIn")}
               </button>
             </form>
             <div className="mt-8 border-t border-line pt-5 text-sm">

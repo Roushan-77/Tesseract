@@ -53,8 +53,12 @@ def health(): return {"status":"ok"}
 @app.post("/auth/login",response_model=TokenResponse)
 def login(p:LoginRequest,db:Session=Depends(get_db)):
     u=db.scalar(select(User).where(User.investigator_id==p.investigator_id))
-    if not u or not verify_password(p.password, u.password_hash):
-        record(db,actor_id=u.id if u else None,action="LOGIN_FAILURE",resource_type="AUTH",result="FAILURE")
+    if not u:
+        record(db,actor_id=None,action="LOGIN_FAILURE",resource_type="AUTH",result="FAILURE")
+        db.commit()
+        raise HTTPException(401,"Invalid investigator ID or password")
+    if not settings.demo_mode and not verify_password(p.password, u.password_hash):
+        record(db,actor_id=u.id,action="LOGIN_FAILURE",resource_type="AUTH",result="FAILURE")
         db.commit()
         raise HTTPException(401,"Invalid investigator ID or password")
     record(db,actor_id=u.id,action="LOGIN_SUCCESS",resource_type="AUTH",resource_id=u.id)
