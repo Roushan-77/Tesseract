@@ -13,7 +13,7 @@ from .config import settings
 from .database import get_db
 from .models import AccessRequest, AuditEvent, Case, CaseAssignment, Entity, EntityMentionRecord, EntityResolution, Event, EventParticipant, Evidence, EvidenceIntegrity, InvestigationFlag, Relation, User, now
 from .schemas import AccessDecision, AccessRequestCreate, AccessRequestOut, AssignmentOut, AuditOut, CaseListOut, CaseOut, CopilotOut, CopilotRequest, EntityMentionOut, EntityOut, EventOut, EvidenceOut, ExtractionOut, FlagCreate, FlagOut, FlagResolve, GraphOut, IntelligenceOut, IntegrityOut, LoginRequest, RelatedCaseOut, RelationOut, ResolutionOut, TimelineOut, TokenResponse, UserOut
-from .security import current_user, token_for
+from .security import current_user, token_for, verify_password
 from .processing import ProcessingError, process_document
 from .intelligence import reconcile_prompt4
 from .graph import build_case_graph, intelligence_for_case, timeline_for_case
@@ -53,8 +53,13 @@ def health(): return {"status":"ok"}
 @app.post("/auth/login",response_model=TokenResponse)
 def login(p:LoginRequest,db:Session=Depends(get_db)):
     u=db.scalar(select(User).where(User.investigator_id==p.investigator_id))
-    if not u or p.password!=settings.demo_password: record(db,actor_id=u.id if u else None,action="LOGIN_FAILURE",resource_type="AUTH",result="FAILURE");db.commit();raise HTTPException(401,"Invalid investigator ID or password")
-    record(db,actor_id=u.id,action="LOGIN_SUCCESS",resource_type="AUTH",resource_id=u.id);db.commit();return TokenResponse(access_token=token_for(u),user=u)
+    if not u or not verify_password(p.password, u.password_hash):
+        record(db,actor_id=u.id if u else None,action="LOGIN_FAILURE",resource_type="AUTH",result="FAILURE")
+        db.commit()
+        raise HTTPException(401,"Invalid investigator ID or password")
+    record(db,actor_id=u.id,action="LOGIN_SUCCESS",resource_type="AUTH",resource_id=u.id)
+    db.commit()
+    return TokenResponse(access_token=token_for(u),user=u)
 @app.get("/me",response_model=UserOut)
 def me(u:User=Depends(current_user)): return u
 @app.get("/cases",response_model=list[CaseListOut])

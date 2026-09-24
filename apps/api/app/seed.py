@@ -22,6 +22,7 @@ from .models import (
     now,
     uid,
 )
+from .security import hash_password
 from .storage import STORAGE_ROOT
 
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -144,14 +145,21 @@ def run():
             ("INV-032", "SI Vikram Patel", "INVESTIGATOR"),
         ]:
             user = db.scalar(select(User).where(User.investigator_id == uid_code))
+            hashed_pw = hash_password(settings.demo_password)
             if not user:
                 user = User(
                     investigator_id=uid_code,
                     name=name,
-                    password_hash="prototype-configured",
+                    password_hash=hashed_pw,
                     role=role,
                 )
                 db.add(user)
+                db.flush()
+            else:
+                user.name = name
+                user.role = role
+                user.password_hash = hashed_pw
+                user.is_active = True
                 db.flush()
             users_map[uid_code] = user
 
