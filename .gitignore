@@ -1,0 +1,26 @@
+# Dependencies & environments
+node_modules/
+.venv/
+env/
+venv/
+
+# Build artifacts
+.next/
+out/
+build/
+dist/
+__pycache__/
+*.pyc
+
+# Local secrets & storage
+.env
+.env.local
+.env*.local
+postgres-data/
+neo4j-data/
+storage/
+
+# IDE & OS files
+.DS_Store
+Thumbs.db
+*.log

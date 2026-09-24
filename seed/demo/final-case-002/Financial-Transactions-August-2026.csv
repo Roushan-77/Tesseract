@@ -1,0 +1,6 @@
+timestamp,sender_account,receiver_account,amount,description
+2026-08-10T12:18:00,ACC-ROHAN-01,ACC-LOGI-17,42000,Fleet maintenance advance
+2026-08-14T15:42:00,ACC-LOGI-17,ACC-SUPPLY-04,38500,Warehouse supply settlement
+2026-08-18T11:20:00,ACC-ROHAN-01,ACC-LOGI-17,45000,Freight handling disbursement
+2026-08-23T11:30:00,ACC-ROHAN-01,ACC-LOGI-17,480000,Urgent consignment handling advance (Anomalous)
+2026-08-23T14:45:00,ACC-LOGI-17,ACC-SUPPLY-04,35000,Special transit fuel advance

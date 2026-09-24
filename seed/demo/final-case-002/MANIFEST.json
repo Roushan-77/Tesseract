@@ -1,0 +1,88 @@
+{
+  "case_id": "CASE-002",
+  "title": "Mumbai Warehouse Network Investigation",
+  "lead_investigator": "INV-017 (Inspector Rahul Mehta)",
+  "file_count": 6,
+  "files": [
+    {
+      "filename": "FIR-183-2026.pdf",
+      "document_type": "PDF",
+      "expected_processing_method": "OCR",
+      "key_entities": [
+        "Rohan Mehta",
+        "Arjun Deshmukh",
+        "Rajesh Verma",
+        "Apex Logistics Mumbai",
+        "Warehouse 14",
+        "+91 90000 32741",
+        "+91 90000 18427",
+        "MH-04-KT-2187"
+      ]
+    },
+    {
+      "filename": "CDR-August-2026.csv",
+      "document_type": "CSV",
+      "expected_processing_method": "Structured Parsing",
+      "key_entities": [
+        "+91 90000 32741",
+        "+91 90000 58126",
+        "+91 90000 61483",
+        "MIDC Industrial Estate",
+        "Andheri East"
+      ],
+      "anomaly_intent": "Communication activity spike on 21 August 2026 (8 calls vs baseline of 1 call/day)"
+    },
+    {
+      "filename": "Financial-Transactions-August-2026.csv",
+      "document_type": "CSV",
+      "expected_processing_method": "Structured Parsing",
+      "key_entities": [
+        "ACC-ROHAN-01",
+        "ACC-LOGI-17",
+        "ACC-SUPPLY-04"
+      ],
+      "anomaly_intent": "Anomalous high-value transfer of \u20b94,80,000 on 23 August 2026 at 11:30 hrs"
+    },
+    {
+      "filename": "Surveillance-Report-01.pdf",
+      "document_type": "PDF",
+      "expected_processing_method": "OCR",
+      "key_entities": [
+        "Rohan Mehta",
+        "Rajesh Verma",
+        "Sunil Deshmukh",
+        "Warehouse 14",
+        "MH-04-KT-2187"
+      ]
+    },
+    {
+      "filename": "Field-Intelligence-Report.pdf",
+      "document_type": "PDF",
+      "expected_processing_method": "OCR",
+      "key_entities": [
+        "Rohan Mehta",
+        "Rajesh Verma",
+        "Apex Logistics Mumbai",
+        "Warehouse 14",
+        "+91 90000 32741",
+        "+91 90000 58126",
+        "+91 90000 61483",
+        "ACC-LOGI-17"
+      ],
+      "cross_case_intent": "Shared link: ACC-LOGI-17 connected to restricted EOW inquiry CASE-003"
+    },
+    {
+      "filename": "Vehicle-Movement-Records.csv",
+      "document_type": "CSV",
+      "expected_processing_method": "Structured Parsing",
+      "key_entities": [
+        "MH-04-KT-2187",
+        "Sunil Deshmukh",
+        "Rajesh Verma",
+        "Warehouse 14",
+        "Andheri East",
+        "MIDC Industrial Estate"
+      ]
+    }
+  ]
+}

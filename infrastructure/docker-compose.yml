@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tesseract-postgres
+    environment:
+      POSTGRES_DB: tesseract
+      POSTGRES_USER: tesseract
+      POSTGRES_PASSWORD: tesseract
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tesseract -d tesseract"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  neo4j:
+    image: neo4j:5-community
+    container_name: tesseract-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-tesseract-local}
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  neo4j-data:

@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color: #182230; background: #f6f8fa; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; font-family: Arial, Helvetica, sans-serif; }
+button, input, select { font: inherit; }
+.panel { @apply border border-line bg-white; }
+.table-head { @apply border-b border-line bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500; }
+.nav-item { @apply flex items-center gap-3 border-l-2 border-transparent px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white; }
+.nav-item.active { @apply border-l-sky-300 bg-white/10 text-white; }
